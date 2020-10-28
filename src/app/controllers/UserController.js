@@ -1,5 +1,10 @@
+const { hash } = require('bcryptjs');
+const { unlinkSync } = require('fs');
+
 const User = require('../model/User');
 const { formatCpfCnpj, formatCep } = require('../../lib/utils');
+const loadProductService = require('../services/loadProductService');
+const Product = require('../model/Product');
 
 module.exports = {
   registerForm(request, response) {
@@ -7,19 +12,41 @@ module.exports = {
   },
 
   async show(request, response) {
-    const { user } = request;
-    user.cpf_cnpj = formatCpfCnpj(user.cpf_cnpj);
-    user.cep = formatCep(String(user.cep));
+    try {
+      const { user } = request;
+      user.cpf_cnpj = formatCpfCnpj(user.cpf_cnpj);
+      user.cep = formatCep(String(user.cep));
 
-    return response.render('user/index', { user });
+      return response.render('user/index', { user });
+    } catch (error) {
+      console.error(`UserController :: show :: ${error}`);
+    }
   },
 
   async post(request, response) {
-    const userId = await User.create(request.body);
+    try {
+      let { name, email, password, cpf_cnpj, cep, address } = request.body;
 
-    request.session.userId = userId;
+      password = hash(password);
 
-    return response.redirect('/users');
+      cpf_cnpj = cpf_cnpj.replace(/\D/g, '');
+      cep = cep.replace(/\D/g, '');
+
+      const userId = await User.create({
+        name,
+        email,
+        password,
+        cpf_cnpj,
+        cep,
+        address
+      });
+
+      request.session.userId = userId;
+
+      return response.redirect('/users');
+    } catch (error) {
+      console.error(`UserController :: post :: ${error}`);
+    }
   },
 
   async update(request, response) {
@@ -48,15 +75,45 @@ module.exports = {
 
   async delete(request, response) {
     try {
-      await User.delete(request.session.userId);
 
+      const products = await Product.findAll({ where: { user_id: request.body.id } });
+
+      // Pegar todas imagens
+      const allFilesPromise = products.map(product => {
+        return Product.files(product.id);
+      });
+
+      let promiseResults = await Promise.all(allFilesPromise);
+
+      // Deletando Usuário
+
+      await User.delete(request.body.id);
       request.session.destroy();
+
+      // remover todas imagens
+      promiseResults.map(files => {
+        files.map(file => {
+          try {
+            unlinkSync(file.path);
+          } catch (err) {
+            console.error(`Não foi possivel deletar uma imagem :: ${err}`);
+          }
+        })
+      });
 
       return response.render('session/login', { sucess: 'Conta deletada com sucesso' });
 
     } catch (err) {
-      console.error(`userController::update :: ${err}`);
+      console.error(`userController:: delete :: ${err}`);
       return response.render('user/index', { user: request.body, error: 'Não foi possivel deletar sua conta!' });
     }
-  }
+  },
+
+  async ads(request, response) {
+    const products = await loadProductService.load('products', {
+      where: { user_id: request.session.userId }
+    });
+
+    return response.render('user/ads', { products });
+  },
 }
