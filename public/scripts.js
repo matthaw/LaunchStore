@@ -296,5 +296,22 @@ const Validate = {
       value,
       menssage
     }
+  },
+
+  allFields(event) {
+    const items = document.querySelectorAll('.item input, .item select, .item textarea');
+
+    for (item of items) {
+      if (item.value == '') {
+        const message = document.createElement('div');
+        message.classList.add('messages');
+        message.classList.add('error');
+        message.style.position = 'fixed';
+        message.innerHTML = 'Todos campos são obrigatórios.';
+        document.querySelector('body').append(message);
+
+        event.preventDefault();
+      }
+    }
   }
 }
