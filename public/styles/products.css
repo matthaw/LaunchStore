@@ -154,13 +154,15 @@
   margin-left: 8px;
 }
 
-.product-single .price-buy .buy button {
+.product-single .price-buy .buy .button {
   background-color: var(--india-color);
   font-size: 14px;
   letter-spacing: 0.4px;
+  margin-left: 16px;
+  padding: 8px 16px;
 }
 
-.product-single .price-buy .buy button:hover {
+.product-single .price-buy .buy .button:hover {
   background-color: var(--india-color-shadown);
 }
 
