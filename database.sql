@@ -104,3 +104,43 @@ add constraint files_product_id_fkey
 foreign key ("product_id")
 references "products" ("id")
 on delete cascade;
+
+-- Reset tables
+
+delete from products;
+delete from users;
+delete from files;
+
+-- restart sequence auto increment from table ids
+alter sequence products_id_seq restart with 1;
+alter sequence users_id_seq restart with 1;
+alter sequence files_id_seq restart with 1;
+
+
+-- password recovery
+alter table "users" add column reset_token text;
+alter table "users" add column reset_token_expires text;
+
+-- create Orders
+
+create table "orders" (
+	"id" serial primary key,
+  "seller_id" int not null,
+  "buyer_id" int not null,
+  "product_id" int not null,
+  "price" int not null,
+  "quantity" int default 0,
+  "total" int not null,
+  "status" text not null,
+  "created_at" timestamp default (now()),
+  "updated_at" timestamp default (now())
+  );
+  
+alter table "orders" add foreign key ("seller_id") references "users" ("id");
+alter table "orders" add foreign key ("buyer_id") references "users" ("id");
+alter table "orders" add foreign key ("product_id") references "products" ("id");
+
+create trigger set_timestamp
+before update on orders
+for each row
+execute procedure trigger_set_timestamp();
